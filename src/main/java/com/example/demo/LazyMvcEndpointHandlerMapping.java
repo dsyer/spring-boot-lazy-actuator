@@ -17,27 +17,23 @@
 package com.example.demo;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.boot.Banner.Mode;
-import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
+import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
-import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.actuate.autoconfigure.endpoint.web.servlet.WebMvcEndpointManagementContextConfiguration;
+import org.springframework.boot.actuate.autoconfigure.health.HealthEndpointAutoConfiguration;
+import org.springframework.boot.actuate.autoconfigure.health.HealthIndicatorAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StreamUtils;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.handler.AbstractHandlerMapping;
 import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
-import org.springframework.web.servlet.mvc.Controller;
 
 /**
  * @author Dave Syer
@@ -84,49 +80,22 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 			return null;
 		}
 		if (this.context == null) {
-			this.context = new SpringApplicationBuilder(Object.class).bannerMode(Mode.OFF)
-					.initializers(new LazyInitializer()).web(WebApplicationType.NONE)
-					.parent(this.parent).run();
-			this.delegate = this.context.getBean(HandlerMapping.class);
+			AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
+			context.setParent(this.parent);
+			context.register(SimpleActuatorConfiguration.class);
+			context.refresh();
+			this.delegate = context.getBean("webEndpointServletHandlerMapping", HandlerMapping.class);
+			this.context = context;
 		}
 		return this.delegate.getHandler(request);
 	}
 
-	static class LazyInitializer
-			implements ApplicationContextInitializer<GenericApplicationContext> {
-
-		@Override
-		public void initialize(GenericApplicationContext context) {
-			context.registerBean(LazyController.class, () -> new LazyController());
-			context.registerBean(SimpleHandlerMapping.class,
-					() -> new SimpleHandlerMapping(context));
-		}
-
-	}
-
-	static class SimpleHandlerMapping extends AbstractHandlerMapping {
-
-		private ApplicationContext context;
-
-		public SimpleHandlerMapping(ApplicationContext context) {
-			this.context = context;
-		}
-
-		@Override
-		protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
-			return this.context.getBean(LazyController.class);
-		}
-
-	}
-
-	static class LazyController implements Controller {
-		@Override
-		public ModelAndView handleRequest(HttpServletRequest request,
-				HttpServletResponse response) throws Exception {
-			response.setStatus(HttpStatus.OK.value());
-			StreamUtils.copy("ok".getBytes(), response.getOutputStream());
-			return null;
-		}
+	@Configuration
+	@Import({ EndpointAutoConfiguration.class, WebEndpointAutoConfiguration.class,
+			HealthIndicatorAutoConfiguration.class,
+			HealthEndpointAutoConfiguration.class,
+			WebMvcEndpointManagementContextConfiguration.class})
+	static class SimpleActuatorConfiguration {
 	}
 
 }
