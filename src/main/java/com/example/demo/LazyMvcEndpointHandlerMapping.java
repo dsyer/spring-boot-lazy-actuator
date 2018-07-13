@@ -16,22 +16,23 @@
 
 package com.example.demo;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
+import com.example.config.SimpleActuatorConfiguration;
+
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
-import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
-import org.springframework.boot.actuate.autoconfigure.endpoint.web.servlet.WebMvcEndpointManagementContextConfiguration;
-import org.springframework.boot.actuate.autoconfigure.health.HealthEndpointAutoConfiguration;
-import org.springframework.boot.actuate.autoconfigure.health.HealthIndicatorAutoConfiguration;
+import org.springframework.boot.actuate.endpoint.web.servlet.ControllerEndpointHandlerMapping;
+import org.springframework.boot.actuate.endpoint.web.servlet.WebMvcEndpointHandlerMapping;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
 
@@ -47,7 +48,7 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 	private int order;
 	private ConfigurableApplicationContext parent;
 	private ConfigurableApplicationContext context;
-	private HandlerMapping delegate;
+	private List<HandlerMapping> delegates = new ArrayList<>();
 
 	public LazyMvcEndpointHandlerMapping(ConfigurableApplicationContext parent,
 			WebEndpointProperties properties) {
@@ -84,18 +85,17 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 			context.setParent(this.parent);
 			context.register(SimpleActuatorConfiguration.class);
 			context.refresh();
-			this.delegate = context.getBean("webEndpointServletHandlerMapping", HandlerMapping.class);
+			this.delegates.add(context.getBean(WebMvcEndpointHandlerMapping.class));
+			this.delegates.add(context.getBean(ControllerEndpointHandlerMapping.class));
 			this.context = context;
 		}
-		return this.delegate.getHandler(request);
-	}
-
-	@Configuration
-	@Import({ EndpointAutoConfiguration.class, WebEndpointAutoConfiguration.class,
-			HealthIndicatorAutoConfiguration.class,
-			HealthEndpointAutoConfiguration.class,
-			WebMvcEndpointManagementContextConfiguration.class})
-	static class SimpleActuatorConfiguration {
+		for (HandlerMapping delegate : this.delegates) {
+			HandlerExecutionChain result = delegate.getHandler(request);
+			if (result != null) {
+				return result;
+			}
+		}
+		return null;
 	}
 
 }
