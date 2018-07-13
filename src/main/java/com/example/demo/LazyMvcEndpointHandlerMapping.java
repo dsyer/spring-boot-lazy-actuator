@@ -20,8 +20,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.boot.Banner.Mode;
 import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -41,6 +44,7 @@ import org.springframework.web.servlet.mvc.Controller;
  *
  */
 @Component
+@EnableConfigurationProperties(WebEndpointProperties.class)
 public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 		implements Ordered, DisposableBean {
 
@@ -49,9 +53,10 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 	private ConfigurableApplicationContext context;
 	private HandlerMapping delegate;
 
-	public LazyMvcEndpointHandlerMapping(ConfigurableApplicationContext parent) {
+	public LazyMvcEndpointHandlerMapping(ConfigurableApplicationContext parent,
+			WebEndpointProperties properties) {
 		this.parent = parent;
-		registerHandler("/actuator/**", this);
+		registerHandler(properties.getBasePath() + "/**", this);
 		setOrder(HIGHEST_PRECEDENCE);
 	}
 
@@ -79,7 +84,7 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 			return null;
 		}
 		if (this.context == null) {
-			this.context = new SpringApplicationBuilder(Object.class)
+			this.context = new SpringApplicationBuilder(Object.class).bannerMode(Mode.OFF)
 					.initializers(new LazyInitializer()).web(WebApplicationType.NONE)
 					.parent(this.parent).run();
 			this.delegate = this.context.getBean(HandlerMapping.class);
