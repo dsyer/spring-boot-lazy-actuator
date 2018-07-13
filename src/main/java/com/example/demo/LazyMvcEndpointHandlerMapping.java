@@ -19,10 +19,20 @@ package com.example.demo;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.handler.AbstractHandlerMapping;
 import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
 import org.springframework.web.servlet.mvc.Controller;
 
@@ -32,18 +42,86 @@ import org.springframework.web.servlet.mvc.Controller;
  */
 @Component
 public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
-		implements Controller {
+		implements Ordered, DisposableBean {
 
-	public LazyMvcEndpointHandlerMapping() {
+	private int order;
+	private ConfigurableApplicationContext parent;
+	private ConfigurableApplicationContext context;
+	private HandlerMapping delegate;
+
+	public LazyMvcEndpointHandlerMapping(ConfigurableApplicationContext parent) {
+		this.parent = parent;
 		registerHandler("/actuator/**", this);
 		setOrder(HIGHEST_PRECEDENCE);
 	}
 
 	@Override
-	public ModelAndView handleRequest(HttpServletRequest request,
-			HttpServletResponse response) throws Exception {
-		response.setStatus(HttpStatus.OK.value());
-		StreamUtils.copy("ok".getBytes(), response.getOutputStream());
-		return null;
+	public void destroy() throws Exception {
+		if (this.context != null) {
+			this.context.close();
+		}
 	}
+
+	public void setOrder(int order) {
+		this.order = order;
+	}
+
+	@Override
+	public int getOrder() {
+		return this.order;
+	}
+
+	@Override
+	protected Object lookupHandler(String urlPath, HttpServletRequest request)
+			throws Exception {
+		Object handler = super.lookupHandler(urlPath, request);
+		if (handler == null) {
+			return null;
+		}
+		if (this.context == null) {
+			this.context = new SpringApplicationBuilder(Object.class)
+					.initializers(new LazyInitializer()).web(WebApplicationType.NONE)
+					.parent(this.parent).run();
+			this.delegate = this.context.getBean(HandlerMapping.class);
+		}
+		return this.delegate.getHandler(request);
+	}
+
+	static class LazyInitializer
+			implements ApplicationContextInitializer<GenericApplicationContext> {
+
+		@Override
+		public void initialize(GenericApplicationContext context) {
+			context.registerBean(LazyController.class, () -> new LazyController());
+			context.registerBean(SimpleHandlerMapping.class,
+					() -> new SimpleHandlerMapping(context));
+		}
+
+	}
+
+	static class SimpleHandlerMapping extends AbstractHandlerMapping {
+
+		private ApplicationContext context;
+
+		public SimpleHandlerMapping(ApplicationContext context) {
+			this.context = context;
+		}
+
+		@Override
+		protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
+			return this.context.getBean(LazyController.class);
+		}
+
+	}
+
+	static class LazyController implements Controller {
+		@Override
+		public ModelAndView handleRequest(HttpServletRequest request,
+				HttpServletResponse response) throws Exception {
+			response.setStatus(HttpStatus.OK.value());
+			StreamUtils.copy("ok".getBytes(), response.getOutputStream());
+			return null;
+		}
+	}
+
 }
