@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package com.example.demo;
+package com.example.config;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
-
-import com.example.config.SimpleActuatorConfiguration;
 
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
