@@ -23,10 +23,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
-import org.springframework.boot.actuate.endpoint.web.servlet.ControllerEndpointHandlerMapping;
-import org.springframework.boot.actuate.endpoint.web.servlet.WebMvcEndpointHandlerMapping;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
@@ -81,10 +80,10 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 		if (this.context == null) {
 			AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
 			context.setParent(this.parent);
-			context.register(SimpleActuatorConfiguration.class);
+			context.register(ActuatorAutoConfigurations.class);
 			context.refresh();
-			this.delegates.add(context.getBean(WebMvcEndpointHandlerMapping.class));
-			this.delegates.add(context.getBean(ControllerEndpointHandlerMapping.class));
+			this.delegates.addAll(context.getBeansOfType(HandlerMapping.class).values());
+			OrderComparator.sort(this.delegates);
 			this.context = context;
 		}
 		for (HandlerMapping delegate : this.delegates) {
