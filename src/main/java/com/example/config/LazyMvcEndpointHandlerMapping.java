@@ -19,19 +19,19 @@ package com.example.config;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.reactive.context.AnnotationConfigReactiveWebApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.HandlerMapping;
-import org.springframework.web.reactive.handler.AbstractUrlHandlerMapping;
-import org.springframework.web.server.ServerWebExchange;
-
-import reactor.core.publisher.Mono;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import org.springframework.web.servlet.HandlerExecutionChain;
+import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
 
 /**
  * @author Dave Syer
@@ -71,9 +71,10 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 	}
 
 	@Override
-	public Mono<Object> getHandler(ServerWebExchange request) {
+	public final HandlerExecutionChain getHandlerInternal(HttpServletRequest request)
+			throws Exception {
 		if (this.context == null) {
-			AnnotationConfigReactiveWebApplicationContext context = new AnnotationConfigReactiveWebApplicationContext();
+			AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
 			context.setParent(this.parent);
 			context.register(ActuatorAutoConfigurations.class);
 			context.refresh();
@@ -82,12 +83,12 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 			this.context = context;
 		}
 		for (HandlerMapping delegate : this.delegates) {
-			Mono<Object> result = delegate.getHandler(request);
+			HandlerExecutionChain result = delegate.getHandler(request);
 			if (result != null) {
 				return result;
 			}
 		}
-		return Mono.empty();
+		return null;
 	}
 
 }
