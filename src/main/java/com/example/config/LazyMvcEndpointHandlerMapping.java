@@ -19,19 +19,19 @@ package com.example.config;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.reactive.context.AnnotationConfigReactiveWebApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import org.springframework.web.servlet.HandlerExecutionChain;
-import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
+import org.springframework.web.reactive.HandlerMapping;
+import org.springframework.web.reactive.handler.AbstractUrlHandlerMapping;
+import org.springframework.web.server.ServerWebExchange;
+
+import reactor.core.publisher.Mono;
 
 /**
  * @author Dave Syer
@@ -71,14 +71,9 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 	}
 
 	@Override
-	protected Object lookupHandler(String urlPath, HttpServletRequest request)
-			throws Exception {
-		Object handler = super.lookupHandler(urlPath, request);
-		if (handler == null) {
-			return null;
-		}
+	public Mono<Object> getHandler(ServerWebExchange request) {
 		if (this.context == null) {
-			AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
+			AnnotationConfigReactiveWebApplicationContext context = new AnnotationConfigReactiveWebApplicationContext();
 			context.setParent(this.parent);
 			context.register(ActuatorAutoConfigurations.class);
 			context.refresh();
@@ -87,12 +82,12 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 			this.context = context;
 		}
 		for (HandlerMapping delegate : this.delegates) {
-			HandlerExecutionChain result = delegate.getHandler(request);
+			Mono<Object> result = delegate.getHandler(request);
 			if (result != null) {
 				return result;
 			}
 		}
-		return null;
+		return Mono.empty();
 	}
 
 }
