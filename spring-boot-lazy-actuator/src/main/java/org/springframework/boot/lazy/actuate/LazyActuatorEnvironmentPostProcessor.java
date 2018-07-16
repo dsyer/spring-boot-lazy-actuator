@@ -74,9 +74,14 @@ public class LazyActuatorEnvironmentPostProcessor implements EnvironmentPostProc
 		}
 	}
 
-	private boolean isActuator(String auto) {
-		// TODO: out metrics and audit back in
-		return auto.startsWith("org.springframework.boot.actuate.autoconfig");
+	public static boolean isActuator(String auto) {
+		if (!auto.startsWith("org.springframework.boot.actuate.autoconfig")) {
+			return false;
+		}
+		if (auto.contains("metrics") || auto.contains("audit")) {
+			return auto.contains("Endpoint");
+		}
+		return  true;
 	}
 
 }

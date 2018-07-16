@@ -1,0 +1,13 @@
+This project makes your Spring Boot actuators start up lazily, saving
+quite a chunk of time on startup (400-600ms out of 1800-2000ms in a
+simple single-endpoint demo app). The first time an actuator endpoint
+is queried over HTTP, you pay back the cost on the first request. It
+works by creating a child application context with just the actuator
+autoconfig in it.
+
+It also makes every bean `@Lazy` by default, which boosts startup time
+of any Spring Boot app, in the case that you don't use all the
+autoconfigured beans.
+
+You can switch off the laziness with `spring.lazy.enabled=false`
+(system property, command line etc.).

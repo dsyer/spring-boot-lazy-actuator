@@ -72,7 +72,7 @@ class ActuatorAutoConfigurations {
 			String[] imports = super.selectImports(annotationMetadata);
 			List<String> result = new ArrayList<>();
 			for (String candidate : imports) {
-				if (candidate.startsWith("org.springframework.boot.actuate")) {
+				if (LazyActuatorEnvironmentPostProcessor.isActuator(candidate)) {
 					result.add(candidate);
 				}
 			}
@@ -82,7 +82,6 @@ class ActuatorAutoConfigurations {
 		@Override
 		protected Set<String> getExclusions(AnnotationMetadata metadata,
 				AnnotationAttributes attributes) {
-			// TODO: exclude only actuate autoconfigs
 			return Collections.emptySet();
 		}
 
