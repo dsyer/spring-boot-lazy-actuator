@@ -1,0 +1,8 @@
+org.springframework.context.ApplicationListener=\
+org.springframework.boot.lazy.actuate.BeanCountingApplicationListener
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+org.springframework.boot.lazy.actuate.LazyActuatorEnvironmentPostProcessor
+
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.springframework.boot.lazy.actuate.LazyActuatorAutoConfiguration
