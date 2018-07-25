@@ -76,6 +76,11 @@ public class LazyMvcEndpointHandlerMapping extends AbstractUrlHandlerMapping
 			context.refresh();
 			this.delegates.addAll(context.getBeansOfType(HandlerMapping.class).values());
 			OrderComparator.sort(this.delegates);
+			for (HandlerMapping mapping : new ArrayList<>(this.delegates)) {
+				if (mapping instanceof LazyMvcEndpointHandlerMapping) {
+					this.delegates.remove(mapping);
+				}
+			}
 			this.context = context;
 		}
 		for (HandlerMapping delegate : this.delegates) {
