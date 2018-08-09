@@ -17,6 +17,7 @@
 package org.springframework.boot.lazy.actuate;
 
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
+import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -25,7 +26,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 /**
  * @author Dave Syer
@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Import;
  */
 @Configuration
 @ConditionalOnProperty(prefix = "spring.lazy", name = "enabled", matchIfMissing = true)
-@Import({LazyInitBeanFactoryPostProcessor.class})
+@ConditionalOnClass(Endpoint.class)
 @EnableConfigurationProperties(WebEndpointProperties.class)
 public class LazyActuatorAutoConfiguration {
 	

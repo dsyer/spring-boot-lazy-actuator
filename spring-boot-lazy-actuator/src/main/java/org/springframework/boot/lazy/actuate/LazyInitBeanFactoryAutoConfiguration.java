@@ -19,17 +19,19 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
 
-@Component
-public class LazyInitBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+@Configuration
+@ConditionalOnProperty(prefix = "spring.lazy", name = "enabled", matchIfMissing = true)
+public class LazyInitBeanFactoryAutoConfiguration implements BeanFactoryPostProcessor {
 
 	private Class<?>[] exclusionList;
 
-	public LazyInitBeanFactoryPostProcessor() {
+	public LazyInitBeanFactoryAutoConfiguration() {
 	}
 
-	public LazyInitBeanFactoryPostProcessor(Class<?>[] exclusionList) {
+	public LazyInitBeanFactoryAutoConfiguration(Class<?>[] exclusionList) {
 		this.exclusionList = exclusionList;
 	}
 
